@@ -125,6 +125,7 @@ class Rainbow():
                 line = sys.stdin.readline()
                 if not line:
                     break # EOF
+                sys.stdin.flush()
                 sys.stdout.write(self.colorize(line))
         except Exception, e:
             if self.debug_mode:
