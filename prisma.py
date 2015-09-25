@@ -175,10 +175,10 @@ if __name__ == '__main__':
 
     # Parse Arguments
     parser = argparse.ArgumentParser(description='Prisma - command line colorizer')
-    parser.add_argument('-s', action='append', nargs='+', default=None,
-                           help='Strings to highlight, separate with space (e.g. -s failed error')
+    parser.add_argument('-s', action='append', nargs='+', default=None, metavar='string',
+                           help='Strings to highlight, separate with space (e.g. -s failed error)')
     parser.add_argument('-i', action='store_true', help='Case-insensitive search for strings', default=False)
-    parser.add_argument('-w', help='Pause on string match (in seconds)', default=0)
+    parser.add_argument('-w', metavar='seconds', help='Pause on string match (in seconds)', default=0)
     parser.add_argument('--debug', action='store_true', default=False, help='Debug output')
 
     args = parser.parse_args()
