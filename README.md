@@ -38,3 +38,7 @@ Strings output on malware sample
 Tcpdump output
 
 ![Log File Output Colorized](./screens/screen4.png)
+
+String match and wait option (animated GIF)
+
+![String match and wait option](./screens/prisma.gif)
