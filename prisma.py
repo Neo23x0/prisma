@@ -21,17 +21,24 @@ class Rainbow():
 
     debug_mode = False
 
+    # Highlight Strings
+    string_match_caseinsensitive = False
+    highlight_strings = []
+    string_highlight = Fore.WHITE+Back.RED+Style.BRIGHT
+
     # Defined colors
     base_color = Fore.WHITE+Back.BLACK+Style.NORMAL
     cyan_highlight = Fore.CYAN+Back.BLACK+Style.BRIGHT
     green_highlight = Fore.GREEN+Back.BLACK+Style.BRIGHT
-    red = Fore.RED+Back.BLACK+Style.BRIGHT
+
     cyan_back = Fore.BLACK+Back.CYAN
     green_back = Fore.WHITE+Back.GREEN
-    yellow = Fore.YELLOW+Back.BLACK
-    green = Fore.GREEN+Back.BLACK+Style.BRIGHT
-    magenta = Fore.MAGENTA+Back.BLACK
     magenta_back = Fore.WHITE+Back.MAGENTA
+
+    red = Fore.RED+Back.BLACK
+    yellow = Fore.YELLOW+Back.BLACK
+    green = Fore.GREEN+Back.BLACK
+    magenta = Fore.MAGENTA+Back.BLACK
 
     # Application
     COLORIZER = [
@@ -90,11 +97,17 @@ class Rainbow():
                 {'name': 'yargen_import', 'regex': r'(LSASS|SAM|lsass.exe|cmd.exe|LSASRV.DLL)', 'color': magenta },
                 ]
 
-    def __init__(self, debug_mode):
+    def __init__(self, debug_mode, highlight_strings, case_insensitive):
         self.debug_mode = debug_mode
+        self.string_match_caseinsensitive = case_insensitive
+        if highlight_strings:
+            for string in highlight_strings[0]:
+                self.highlight_strings.append(string)
 
     def colorize(self, line):
         """Colorizes the input line"""
+
+        # Regex colorization
         for col in self.COLORIZER:
             try:
                 re_colorer = re.compile(col['regex'])
@@ -116,6 +129,18 @@ class Rainbow():
                 print "REGEX: %s" % col['regex']
                 print "LINE: %s" % line
                 traceback.print_exc()
+
+        # String colorization (parameter)
+        for string in self.highlight_strings:
+            if self.string_match_caseinsensitive:
+                if string.lower() in line.lower():
+                    re_colorer = re.compile(r'({0})'.format(string), re.IGNORECASE)
+                    line = re_colorer.sub(self.string_highlight + r'\1' + self.base_color, line)
+            else:
+                if string in line:
+                    re_colorer = re.compile(r'({0})'.format(string))
+                    line = re_colorer.sub(self.string_highlight + r'\1' + self.base_color, line)
+
         return line
 
     def colorize_stdin(self):
@@ -136,6 +161,9 @@ if __name__ == '__main__':
 
     # Parse Arguments
     parser = argparse.ArgumentParser(description='Prisma - command line colorizer')
+    parser.add_argument('-s', action='append', nargs='+', default=None,
+                           help='Strings to highlight, separate with space (e.g. -s failed error')
+    parser.add_argument('-i', action='store_true', help='Case-insensitive search for strings', default=False)
     parser.add_argument('--debug', action='store_true', default=False, help='Debug output')
 
     args = parser.parse_args()
@@ -143,5 +171,5 @@ if __name__ == '__main__':
     # Colorama Init
     init()
 
-    rainbow = Rainbow(args.debug)
+    rainbow = Rainbow(args.debug, args.s, args.i)
     rainbow.colorize_stdin()
