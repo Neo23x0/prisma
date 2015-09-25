@@ -8,12 +8,13 @@ Prisma
 Automatic Command Line Colorizer
 by Florian Roth
 """
-__version__ = '0.1'
+__version__ = '0.2'
 
 import sys
 import argparse
 import re
 import traceback
+import time
 from colorama import Fore, Back, Style
 from colorama import init
 
@@ -23,6 +24,7 @@ class Rainbow():
 
     # Highlight Strings
     string_match_caseinsensitive = False
+    wait_time = 0
     highlight_strings = []
     string_highlight = Fore.WHITE+Back.RED+Style.BRIGHT
 
@@ -97,8 +99,9 @@ class Rainbow():
                 {'name': 'yargen_import', 'regex': r'(LSASS|SAM|lsass.exe|cmd.exe|LSASRV.DLL)', 'color': magenta },
                 ]
 
-    def __init__(self, debug_mode, highlight_strings, case_insensitive):
+    def __init__(self, debug_mode, highlight_strings, case_insensitive, wait_time):
         self.debug_mode = debug_mode
+        self.wait_time = int(wait_time)
         self.string_match_caseinsensitive = case_insensitive
         if highlight_strings:
             for string in highlight_strings[0]:
@@ -106,6 +109,8 @@ class Rainbow():
 
     def colorize(self, line):
         """Colorizes the input line"""
+
+        do_wait_for_keypress = False
 
         # Regex colorization
         for col in self.COLORIZER:
@@ -136,12 +141,16 @@ class Rainbow():
                 if string.lower() in line.lower():
                     re_colorer = re.compile(r'({0})'.format(string), re.IGNORECASE)
                     line = re_colorer.sub(self.string_highlight + r'\1' + self.base_color, line)
+                    if self.wait_time > 0:
+                        do_wait_for_keypress = True
             else:
                 if string in line:
                     re_colorer = re.compile(r'({0})'.format(string))
                     line = re_colorer.sub(self.string_highlight + r'\1' + self.base_color, line)
+                    if self.wait_time > 0:
+                        do_wait_for_keypress = True
 
-        return line
+        return line, do_wait_for_keypress
 
     def colorize_stdin(self):
         """Reads from STDIN line by line"""
@@ -150,11 +159,16 @@ class Rainbow():
                 line = sys.stdin.readline()
                 if not line:
                     break # EOF
-                sys.stdin.flush()
-                sys.stdout.write(self.colorize(line))
+                colorized_line, wait_for_keypress = self.colorize(line)
+                sys.stdout.write(colorized_line)
+                if wait_for_keypress:
+                    self.await_keypress()
         except Exception, e:
             if self.debug_mode:
                 traceback.print_exc()
+
+    def await_keypress(self):
+        time.sleep(self.wait_time)
 
 
 if __name__ == '__main__':
@@ -164,6 +178,7 @@ if __name__ == '__main__':
     parser.add_argument('-s', action='append', nargs='+', default=None,
                            help='Strings to highlight, separate with space (e.g. -s failed error')
     parser.add_argument('-i', action='store_true', help='Case-insensitive search for strings', default=False)
+    parser.add_argument('-w', help='Pause on string match (in seconds)', default=0)
     parser.add_argument('--debug', action='store_true', default=False, help='Debug output')
 
     args = parser.parse_args()
@@ -171,5 +186,5 @@ if __name__ == '__main__':
     # Colorama Init
     init()
 
-    rainbow = Rainbow(args.debug, args.s, args.i)
+    rainbow = Rainbow(args.debug, args.s, args.i, args.w)
     rainbow.colorize_stdin()
