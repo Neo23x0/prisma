@@ -21,6 +21,7 @@ sudo cp prisma.py /usr/local/bin
 cat /var/log/syslog | prisma.py
 ```
 
+Complete usage options
 ```
 usage: prisma.py [-h] [-s S [S ...]] [-i] [-w W] [--debug]
 
@@ -34,6 +35,12 @@ optional arguments:
   -w W          Pause on string match (in seconds)
   --debug       Debug output
   ```
+
+Use prisma to find certain string in an output, be case-insensitive and wait 3 seconds on every match (see animated GIF below for a demo)
+
+```
+cat /var/log/messages | prisma.py -s error fail -i -w 3
+``` 
 
 # Screenshots
 
