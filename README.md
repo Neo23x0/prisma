@@ -1,8 +1,13 @@
 # prisma
 Command Line STDOUT Colorizer
 
+# Requirements
+
+- [colorama](https://pypi.python.org/pypi/colorama)
+
 # Usage
-Pipe command line output to prisma.py
+Prisma works on all platforms, Linux, OSX and Windows. 
+Just pipe command line output to prisma.py
 
 ```
 cat /var/log/syslog | python ./prisma.py
