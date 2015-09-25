@@ -21,6 +21,20 @@ sudo cp prisma.py /usr/local/bin
 cat /var/log/syslog | prisma.py
 ```
 
+```
+usage: prisma.py [-h] [-s S [S ...]] [-i] [-w W] [--debug]
+
+Prisma - command line colorizer
+
+optional arguments:
+  -h, --help    show this help message and exit
+  -s S [S ...]  Strings to highlight, separate with space (e.g. -s failed
+                error
+  -i            Case-insensitive search for strings
+  -w W          Pause on string match (in seconds)
+  --debug       Debug output
+  ```
+
 # Screenshots
 
 System log file
