@@ -18,7 +18,7 @@ import time
 from colorama import Fore, Back, Style
 from colorama import init
 
-class Rainbow():
+class Prisma():
 
     debug_mode = False
 
@@ -105,6 +105,8 @@ class Rainbow():
                 {'name': 'yargen_import', 'regex': r'(LSASS|SAM|lsass.exe|cmd.exe|LSASRV.DLL)', 'color': magenta },
                 ]
 
+    # IP Regular Expressions
+    # Source: https://stackoverflow.com/questions/53497/regular-expression-that-matches-valid-ipv6-addresses
     # IPv6 RegEx
     ipv6_regex = r'(' \
                  r'([0-9a-fA-F]{1,4}:){7,7}[0-9a-fA-F]{1,4}|' \
@@ -124,11 +126,10 @@ class Rainbow():
                  r'((25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])\.){3,3}' \
                  r'(25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])' \
                  r')'
-    ipv6 = re.compile(ipv6_regex)
-
     # IPv4 RegEx
     ipv4_regex = r'((25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])\.){3,3}(25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])'
     ipv4 = re.compile(ipv4_regex)
+    ipv6 = re.compile(ipv6_regex)
 
     def __init__(self, debug_mode, highlight_strings, case_insensitive, wait_time):
         self.debug_mode = debug_mode
@@ -293,6 +294,6 @@ if __name__ == '__main__':
     # Colorama Init
     init()
 
-    rainbow = Rainbow(args.debug, args.s, args.i, args.w)
+    rainbow = Prisma(args.debug, args.s, args.i, args.w)
     rainbow.initialize_colors()
     rainbow.colorize_stdin()

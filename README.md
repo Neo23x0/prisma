@@ -3,10 +3,18 @@ Command Line STDOUT Colorizer
 
 # Requirements
 
+Prisma works on all platforms, Linux, OSX and Windows. 
+
+- Python 2.7 (not tested with Python 3)
 - [colorama](https://pypi.python.org/pypi/colorama)
 
-# Usage
-Prisma works on all platforms, Linux, OSX and Windows. 
+# Installation
+
+- Clone the github repository - with a desktop client on Windows / OSX or via command line ```git clone https://github.com/Neo23x0/prisma``` 
+- Install colorama Python module via ```sudo easy_install colorama``` or ```sudo pip install colorama``` 
+
+# Quick Start 
+
 Just pipe command line output to prisma.py
 
 ```
@@ -21,7 +29,8 @@ sudo cp prisma.py /usr/local/bin
 cat /var/log/syslog | prisma.py
 ```
 
-Complete usage options
+# Usage 
+
 ```
 usage: prisma.py [-h] [-s string [string ...]] [-i] [-w seconds] [--debug]
 
@@ -30,14 +39,14 @@ Prisma - command line colorizer
 optional arguments:
   -h, --help            show this help message and exit
   -s string [string ...]
-                        Strings to highlight, separate with space (e.g. -s
-                        failed error)
+                        Strings to highlight - separated with space 
+                        (e.g. -s failed error)
   -i                    Case-insensitive search for strings
   -w seconds            Pause on string match (in seconds)
   --debug               Debug output
 ```
 
-Use prisma to find certain string in an output, be case-insensitive and wait 3 seconds on every match (see animated GIF below for a demo)
+Use prisma to find certain string (here: 'error' and 'fail') in an output, be case-insensitive and wait 3 seconds on every match (see animated GIF below for a demo)
 
 ```
 cat /var/log/messages | prisma.py -s error fail -i -w 3
