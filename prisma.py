@@ -198,7 +198,7 @@ class Rainbow():
                 self.assigned_colors[color]['count'] = 0
                 # Found color that has already assigned for that string
                 return color
-            
+
         # No color has yet assigned to the string
         return self.get_available_color(string)
 
