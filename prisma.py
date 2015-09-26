@@ -8,7 +8,7 @@ Prisma
 Automatic Command Line Colorizer
 by Florian Roth
 """
-__version__ = '0.2'
+__version__ = '0.3'
 
 import sys
 import argparse
@@ -42,6 +42,12 @@ class Rainbow():
     green = Fore.GREEN+Back.BLACK
     magenta = Fore.MAGENTA+Back.BLACK
 
+    # Color allocation
+    assigned_colors = {}
+    FORE_COLORS = {'black': Fore.BLACK, 'red': Fore.RED, 'green': Fore.GREEN, 'blue': Fore.BLUE, 
+                   'yellow': Fore.YELLOW, 'mangenta': Fore.MAGENTA, 'cyan': Fore.CYAN, 'white': Fore.WHITE}
+    BACK_COLORS = {'black': Back.BLACK, 'red': Back.RED, 'green': Back.GREEN, 'blue': Back.BLUE, 
+                   'yellow': Back.YELLOW, 'mangenta': Back.MAGENTA, 'cyan': Back.CYAN, 'white': Back.WHITE}
     # Application
     COLORIZER = [
                 # General
@@ -99,6 +105,31 @@ class Rainbow():
                 {'name': 'yargen_import', 'regex': r'(LSASS|SAM|lsass.exe|cmd.exe|LSASRV.DLL)', 'color': magenta },
                 ]
 
+    # IPv6 RegEx
+    ipv6_regex = r'(' \
+                 r'([0-9a-fA-F]{1,4}:){7,7}[0-9a-fA-F]{1,4}|' \
+                 r'([0-9a-fA-F]{1,4}:){1,7}:|' \
+                 r'([0-9a-fA-F]{1,4}:){1,6}:[0-9a-fA-F]{1,4}|' \
+                 r'([0-9a-fA-F]{1,4}:){1,5}(:[0-9a-fA-F]{1,4}){1,2}|' \
+                 r'([0-9a-fA-F]{1,4}:){1,4}(:[0-9a-fA-F]{1,4}){1,3}|' \
+                 r'([0-9a-fA-F]{1,4}:){1,3}(:[0-9a-fA-F]{1,4}){1,4}|' \
+                 r'([0-9a-fA-F]{1,4}:){1,2}(:[0-9a-fA-F]{1,4}){1,5}|' \
+                 r'[0-9a-fA-F]{1,4}:((:[0-9a-fA-F]{1,4}){1,6})|' \
+                 r':((:[0-9a-fA-F]{1,4}){1,7}|:)|' \
+                 r'fe80:(:[0-9a-fA-F]{0,4}){0,4}%[0-9a-zA-Z]{1,}|' \
+                 r'::(ffff(:0{1,4}){0,1}:){0,1}' \
+                 r'((25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])\.){3,3}' \
+                 r'(25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])|' \
+                 r'([0-9a-fA-F]{1,4}:){1,4}:' \
+                 r'((25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])\.){3,3}' \
+                 r'(25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])' \
+                 r')'
+    ipv6 = re.compile(ipv6_regex)
+
+    # IPv4 RegEx
+    ipv4_regex = r'((25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])\.){3,3}(25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])'
+    ipv4 = re.compile(ipv4_regex)
+
     def __init__(self, debug_mode, highlight_strings, case_insensitive, wait_time):
         self.debug_mode = debug_mode
         self.wait_time = int(wait_time)
@@ -106,6 +137,70 @@ class Rainbow():
         if highlight_strings:
             for string in highlight_strings[0]:
                 self.highlight_strings.append(string)
+
+    def initialize_colors(self):
+        """Loop through available components and create all available colors"""
+        
+        for fcolor, fcolor_code in self.FORE_COLORS.iteritems():
+            for bcolor, bcolor_code in self.BACK_COLORS.iteritems():
+                # if foreground and background is the same
+                if fcolor == bcolor:
+                    continue
+                # Other unreadable combinations
+                if fcolor == "green" and bcolor == "cyan":
+                    continue
+                if fcolor == "cyan" and bcolor == "green":
+                    continue
+                if self.debug_mode:
+                    print fcolor_code+bcolor_code + "Initialized COLOR"
+                self.assigned_colors[fcolor_code+bcolor_code] = {}
+                # Color is used for 'string' value - preset is empty
+                self.assigned_colors[fcolor_code+bcolor_code]['string'] = ''
+                # Color count - will be used to select a color that
+                # has not been used for the longest time
+                self.assigned_colors[fcolor_code+bcolor_code]['count'] = 0
+
+    def get_available_color(self, string):
+        """Returns an available color and assignes a string"""
+        # Try to find a color that has not been used
+        for color in self.assigned_colors:
+            if self.assigned_colors[color]['string'] == '':
+                self.assigned_colors[color]['string'] = string
+                # Unused color found
+                return color
+
+        # If no unused color has been found - reuse the one that
+        # has not been used for the most cycles
+        less_used_color = ''
+        max_cycle_count = 0
+        for color in self.assigned_colors:
+            if self.assigned_colors[color]['count'] > max_cycle_count:
+                less_used_color = color
+                max_cycle_count = self.assigned_colors[color]['count']
+        # Reset this color
+        self.assigned_colors[less_used_color]['count'] = 0
+        self.assigned_colors[less_used_color]['string'] = string
+        return less_used_color
+
+    def get_color_for_string(self, string):
+        """Returns a new or assigned color for a given string"""
+        for color in self.assigned_colors:
+            try:
+                # Increase count for unused strings
+                self.assigned_colors[color]['count'] += 1
+            except Exception, e:
+                # If integer overflow
+                self.assigned_colors[color]['count'] = 0
+                self.assigned_colors[color]['string'] = ''
+
+            # already assigned
+            if self.assigned_colors[color]['string'] == string:
+                self.assigned_colors[color]['count'] = 0
+                # Found color that has already assigned for that string
+                return color
+            
+        # No color has yet assigned to the string
+        return self.get_available_color(string)
 
     def colorize(self, line):
         """Colorizes the input line"""
@@ -150,6 +245,18 @@ class Rainbow():
                     if self.wait_time > 0:
                         do_wait_for_keypress = True
 
+        # IP colorization (assigned color mode)
+        for match in self.ipv4.finditer(line):
+            ip = match.group()
+            color = self.get_color_for_string(ip)
+            re_colorer = re.compile(r'({0})'.format(ip))
+            line = re_colorer.sub(color + r'\1' + self.base_color, line)
+        for match in self.ipv6.finditer(line):
+            ip = match.group()
+            color = self.get_color_for_string(ip)
+            re_colorer = re.compile(r'({0})'.format(ip))
+            line = re_colorer.sub(color + r'\1' + self.base_color, line)
+
         return line, do_wait_for_keypress
 
     def colorize_stdin(self):
@@ -187,4 +294,5 @@ if __name__ == '__main__':
     init()
 
     rainbow = Rainbow(args.debug, args.s, args.i, args.w)
+    rainbow.initialize_colors()
     rainbow.colorize_stdin()
