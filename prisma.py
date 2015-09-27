@@ -22,13 +22,16 @@ class Prisma():
 
     debug_mode = False
 
+    # Generic colorisation
+    generic_colorisation = True
+
     # Highlight Strings
     string_match_caseinsensitive = False
     wait_time = 0
     highlight_strings = []
     string_highlight = Fore.WHITE+Back.RED+Style.BRIGHT
 
-    # Defined colors
+    # Predefined colors
     base_color = Fore.WHITE+Back.BLACK+Style.NORMAL
     cyan_highlight = Fore.CYAN+Back.BLACK+Style.BRIGHT
     green_highlight = Fore.GREEN+Back.BLACK+Style.BRIGHT
@@ -41,13 +44,18 @@ class Prisma():
     yellow = Fore.YELLOW+Back.BLACK
     green = Fore.GREEN+Back.BLACK
     magenta = Fore.MAGENTA+Back.BLACK
+    grey = Fore.BLACK+Back.BLACK+Style.BRIGHT
 
-    # Color allocation
+    # Dynamic color allocation
     assigned_colors = {}
     FORE_COLORS = {'black': Fore.BLACK, 'red': Fore.RED, 'green': Fore.GREEN, 'blue': Fore.BLUE, 
                    'yellow': Fore.YELLOW, 'mangenta': Fore.MAGENTA, 'cyan': Fore.CYAN, 'white': Fore.WHITE}
     BACK_COLORS = {'black': Back.BLACK, 'red': Back.RED, 'green': Back.GREEN, 'blue': Back.BLUE, 
                    'yellow': Back.YELLOW, 'mangenta': Back.MAGENTA, 'cyan': Back.CYAN, 'white': Back.WHITE}
+    # Use this regex instead of IP detection
+    dynamic_color_regex = None
+    dynamic_color_mode = "IP" # is default or "REGEX"
+
     # Application
     COLORIZER = [
                 # General
@@ -75,6 +83,7 @@ class Prisma():
                 {'name': 'blocked', 'regex': r'([Bb]locked)\b', 'color': red},
                 {'name': 'filepath_linux', 'regex': r'(/[^\s]+/[^\s]+)\b', 'color': green},
                 {'name': 'filepath_windows', 'regex': r'([C-Z]:\\[^\s]+)\b', 'color': green},
+                {'name': 'zeros', 'regex': r'\b(00|0000|\\x00)\b', 'color': grey},
 
                 # Security
                 {'name': 'yargen_import', 'regex': r'([A-Za-z]:\\|\.exe|\.pdb|\.scr|\.log|\.cfg|\.txt|\.dat|\.msi|\.com|\.bat|\.dll|\.pdb|\.vbs|\.tmp|\.sys)', 'color': magenta },
@@ -108,7 +117,7 @@ class Prisma():
     # IP Regular Expressions
     # Source: https://stackoverflow.com/questions/53497/regular-expression-that-matches-valid-ipv6-addresses
     # IPv6 RegEx
-    ipv6_regex = r'(' \
+    ipv6_regex = r'\b(' \
                  r'([0-9a-fA-F]{1,4}:){7,7}[0-9a-fA-F]{1,4}|' \
                  r'([0-9a-fA-F]{1,4}:){1,7}:|' \
                  r'([0-9a-fA-F]{1,4}:){1,6}:[0-9a-fA-F]{1,4}|' \
@@ -125,19 +134,35 @@ class Prisma():
                  r'([0-9a-fA-F]{1,4}:){1,4}:' \
                  r'((25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])\.){3,3}' \
                  r'(25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])' \
-                 r')'
+                 r')\b'
     # IPv4 RegEx
-    ipv4_regex = r'((25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])\.){3,3}(25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])'
+    ipv4_regex = r'\b((25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])\.){3,3}(25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])\b'
     ipv4 = re.compile(ipv4_regex)
     ipv6 = re.compile(ipv6_regex)
 
-    def __init__(self, debug_mode, highlight_strings, case_insensitive, wait_time):
+    def __init__(self, debug_mode, highlight_strings, case_insensitive, wait_time, dyn_col_regex, no_generic):
         self.debug_mode = debug_mode
         self.wait_time = int(wait_time)
         self.string_match_caseinsensitive = case_insensitive
+
+        # No generic colorisation
+        if no_generic:
+            self.generic_colorisation = False
+
+        # Highlight certain strings
         if highlight_strings:
             for string in highlight_strings[0]:
                 self.highlight_strings.append(string)
+
+        # Dynamic color assignment based on regex (default is IPv4/IPv6 detection)
+        try:
+            if dyn_col_regex != '':
+                self.dynamic_color_regex = re.compile(dyn_col_regex)
+                self.dynamic_color_mode = 'REGEX'
+        except Exception, e:
+            if self.debug_mode:
+                traceback.print_exc()
+            print "[E] Error while compiling the regex value of {0}".format(dyn_col_regex)
 
     def initialize_colors(self):
         """Loop through available components and create all available colors"""
@@ -208,28 +233,51 @@ class Prisma():
 
         do_wait_for_keypress = False
 
+        # IP colorization (assigned color mode)
+        if self.dynamic_color_mode == 'IP':
+            for match in self.ipv4.finditer(line):
+                ip = match.group()
+                color = self.get_color_for_string(ip)
+                re_colorer = re.compile(r'({0})'.format(ip))
+                line = re_colorer.sub(color + r'\1' + self.base_color, line)
+            for match in self.ipv6.finditer(line):
+                ip = match.group()
+                color = self.get_color_for_string(ip)
+                re_colorer = re.compile(r'({0})'.format(ip))
+                line = re_colorer.sub(color + r'\1' + self.base_color, line)
+
         # Regex colorization
-        for col in self.COLORIZER:
-            try:
-                re_colorer = re.compile(col['regex'])
-                if re_colorer.groups == 1:
-                    line = re_colorer.sub(col['color'] + r'\1' + self.base_color, line)
-                if re_colorer.groups == 2:
-                    # Modes
-                    mark_all = False
-                    if 'mode' in col:
-                        if col['mode'] == 'mark_all':
-                            mark_all = True
-                    # Default
-                    if not mark_all:
-                        line = re_colorer.sub(col['color'] + r'\1' + self.base_color + r'\2', line)
-                    # Mark all
-                    else:
-                        line = re_colorer.sub(col['color'] + r'\1\2' + self.base_color, line)
-            except Exception, e:
-                print "REGEX: %s" % col['regex']
-                print "LINE: %s" % line
-                traceback.print_exc()
+        if self.dynamic_color_mode == 'REGEX':
+            for match in self.dynamic_color_regex.finditer(line):
+                string = match.group()
+                print string
+                color = self.get_color_for_string(string)
+                re_colorer = re.compile(r'({0})'.format(string))
+                line = re_colorer.sub(color + r'\1' + self.base_color, line)
+
+        # Regex colorization
+        if self.generic_colorisation:
+            for col in self.COLORIZER:
+                try:
+                    re_colorer = re.compile(col['regex'])
+                    if re_colorer.groups == 1:
+                        line = re_colorer.sub(col['color'] + r'\1' + self.base_color, line)
+                    if re_colorer.groups == 2:
+                        # Modes
+                        mark_all = False
+                        if 'mode' in col:
+                            if col['mode'] == 'mark_all':
+                                mark_all = True
+                        # Default
+                        if not mark_all:
+                            line = re_colorer.sub(col['color'] + r'\1' + self.base_color + r'\2', line)
+                        # Mark all
+                        else:
+                            line = re_colorer.sub(col['color'] + r'\1\2' + self.base_color, line)
+                except Exception, e:
+                    print "REGEX: %s" % col['regex']
+                    print "LINE: %s" % line
+                    traceback.print_exc()
 
         # String colorization (parameter)
         for string in self.highlight_strings:
@@ -245,18 +293,6 @@ class Prisma():
                     line = re_colorer.sub(self.string_highlight + r'\1' + self.base_color, line)
                     if self.wait_time > 0:
                         do_wait_for_keypress = True
-
-        # IP colorization (assigned color mode)
-        for match in self.ipv4.finditer(line):
-            ip = match.group()
-            color = self.get_color_for_string(ip)
-            re_colorer = re.compile(r'({0})'.format(ip))
-            line = re_colorer.sub(color + r'\1' + self.base_color, line)
-        for match in self.ipv6.finditer(line):
-            ip = match.group()
-            color = self.get_color_for_string(ip)
-            re_colorer = re.compile(r'({0})'.format(ip))
-            line = re_colorer.sub(color + r'\1' + self.base_color, line)
 
         return line, do_wait_for_keypress
 
@@ -287,6 +323,10 @@ if __name__ == '__main__':
                            help='Strings to highlight, separate with space (e.g. -s failed error)')
     parser.add_argument('-i', action='store_true', help='Case-insensitive search for strings', default=False)
     parser.add_argument('-w', metavar='seconds', help='Pause on string match (in seconds)', default=0)
+    parser.add_argument('-r', metavar='regex', help='Use this regex for dynamic color assignment '
+                                                    'instead of automatic IPv4/IPv6 detection', default='')
+    parser.add_argument('--nogeneric', action='store_true', default=False,
+                        help='Disable generic colorisation (useful in cases of strange behavior)')
     parser.add_argument('--debug', action='store_true', default=False, help='Debug output')
 
     args = parser.parse_args()
@@ -294,6 +334,6 @@ if __name__ == '__main__':
     # Colorama Init
     init()
 
-    rainbow = Prisma(args.debug, args.s, args.i, args.w)
+    rainbow = Prisma(args.debug, args.s, args.i, args.w, args.r, args.nogeneric)
     rainbow.initialize_colors()
     rainbow.colorize_stdin()
