@@ -5,7 +5,7 @@ Command Line STDOUT Colorizer
 
 Prisma works on all platforms, Linux, OSX and Windows. 
 
-- Python 2.7 (not tested with Python 3)
+- Python 3 (Python 2.7 still works)
 - [colorama](https://pypi.python.org/pypi/colorama)
 
 # Installation
@@ -28,6 +28,8 @@ chmod +x ./prisma.py
 sudo cp prisma.py /usr/local/bin
 cat /var/log/syslog | prisma.py
 ```
+
+If you encounter situations, where color codes are stripped, but should preserved, use `-p` to pass raw ANSI codes.
 
 # Usage 
 
