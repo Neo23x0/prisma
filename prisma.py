@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # -*- coding: iso-8859-1 -*-
 # -*- coding: utf-8 -*-
 
@@ -8,7 +8,7 @@ Prisma
 Automatic Command Line Colorizer
 by Florian Roth
 """
-__version__ = '0.3'
+__version__ = '0.4'
 
 import sys
 import argparse
@@ -17,6 +17,7 @@ import traceback
 import time
 from colorama import Fore, Back, Style
 from colorama import init
+
 
 class Prisma():
 
@@ -192,16 +193,15 @@ class Prisma():
             if dyn_col_regex != '':
                 self.dynamic_color_regex = re.compile(dyn_col_regex)
                 self.dynamic_color_mode = 'REGEX'
-        except Exception, e:
+        except Exception:
             if self.debug_mode:
                 traceback.print_exc()
-            print "[E] Error while compiling the regex value of {0}".format(dyn_col_regex)
+            print("[E] Error while compiling the regex value of {0}".format(dyn_col_regex))
 
     def initialize_colors(self):
         """Loop through available components and create all available colors"""
-        
-        for fcolor, fcolor_code in self.FORE_COLORS.iteritems():
-            for bcolor, bcolor_code in self.BACK_COLORS.iteritems():
+        for fcolor, fcolor_code in self.FORE_COLORS.items():
+            for bcolor, bcolor_code in self.BACK_COLORS.items():
                 # if foreground and background is the same
                 if fcolor == bcolor:
                     continue
@@ -211,7 +211,7 @@ class Prisma():
                 if fcolor == "cyan" and bcolor == "green":
                     continue
                 if self.debug_mode:
-                    print fcolor_code+bcolor_code + "Initialized COLOR"
+                    print(fcolor_code + bcolor_code + "Initialized COLOR")
                 self.assigned_colors[fcolor_code+bcolor_code] = {}
                 # Color is used for 'string' value - preset is empty
                 self.assigned_colors[fcolor_code+bcolor_code]['string'] = ''
@@ -247,7 +247,7 @@ class Prisma():
             try:
                 # Increase count for unused strings
                 self.assigned_colors[color]['count'] += 1
-            except Exception, e:
+            except Exception:
                 # If integer overflow
                 self.assigned_colors[color]['count'] = 0
                 self.assigned_colors[color]['string'] = ''
@@ -283,7 +283,7 @@ class Prisma():
         if self.dynamic_color_mode == 'REGEX':
             for match in self.dynamic_color_regex.finditer(line):
                 string = match.group()
-                print string
+                print(string)
                 color = self.get_color_for_string(string)
                 re_colorer = re.compile(r'({0})'.format(string))
                 line = re_colorer.sub(color + r'\1' + self.base_color, line)
@@ -307,9 +307,9 @@ class Prisma():
                         # Mark all
                         else:
                             line = re_colorer.sub(col['color'] + r'\1\2' + self.base_color, line)
-                except Exception, e:
-                    print "REGEX: %s" % col['regex']
-                    print "LINE: %s" % line
+                except Exception:
+                    print("REGEX: %s" % col['regex'])
+                    print("LINE: %s" % line)
                     traceback.print_exc()
 
         # String colorization (parameter)
@@ -335,12 +335,12 @@ class Prisma():
             while True:
                 line = sys.stdin.readline()
                 if not line:
-                    break # EOF
+                    break  # EOF
                 colorized_line, wait_for_keypress = self.colorize(line)
                 sys.stdout.write(colorized_line)
                 if wait_for_keypress:
                     self.await_keypress()
-        except Exception, e:
+        except Exception:
             if self.debug_mode:
                 traceback.print_exc()
 
@@ -352,12 +352,15 @@ if __name__ == '__main__':
 
     # Parse Arguments
     parser = argparse.ArgumentParser(description='Prisma - command line colorizer')
+
     parser.add_argument('-s', action='append', nargs='+', default=None, metavar='string',
-                           help='Strings to highlight, separate with space (e.g. -s failed error)')
+                        help='Strings to highlight, separate with space (e.g. -s failed error)')
     parser.add_argument('-i', action='store_true', help='Case-insensitive search for strings', default=False)
     parser.add_argument('-w', metavar='seconds', help='Pause on string match (in seconds)', default=0)
     parser.add_argument('-r', metavar='regex', help='Use this regex for dynamic color assignment '
                                                     'instead of automatic IPv4/IPv6 detection', default='')
+    parser.add_argument('-p', action='store_true', help='Pass ANSI codes, which is useful to retain'
+                        'color, when piping to less', default=False)
     parser.add_argument('--nogeneric', action='store_true', default=False,
                         help='Disable generic colorisation (useful in cases of strange behavior)')
     parser.add_argument('--debug', action='store_true', default=False, help='Debug output')
@@ -365,7 +368,10 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     # Colorama Init
-    init()
+    if(args.p):  # Do not strip ANSI codes
+        init(strip=False)
+    else:
+        init()
 
     rainbow = Prisma(args.debug, args.s, args.i, args.w, args.r, args.nogeneric)
     rainbow.initialize_colors()
